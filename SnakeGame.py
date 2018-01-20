@@ -203,7 +203,7 @@ def runGame(death_count,font,model):
                 pygame.display.flip()
 
                 # Clock ticking
-                pygame.time.Clock().tick(9999999999999)
+                pygame.time.Clock().tick(60)
 
                 # Manual controls
                 # pressed = pygame.key.get_pressed()
