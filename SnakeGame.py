@@ -136,9 +136,8 @@ def getTrainedModel(data, labels):
 def getPredictedDirection(snake_nodes,absolute_direction,relative_direction,model,inputs,grid):
     head = snake_nodes[0]
 
-    # print(model.predict(preprocess(inputs)))
-
-    prediction = model.predict(preprocess(inputs))
+    prediction = model.predict(np.array(inputs, dtype=np.float32).reshape(-1, 4, 1))
+    # print(prediction)
 
     if prediction < 0.45:
         relative_direction = randint(-1, 1)
@@ -167,10 +166,6 @@ def getPredictedDirection(snake_nodes,absolute_direction,relative_direction,mode
                 if relative_direction == -1:  return Direction.right,relative_direction
                 elif relative_direction == 0: return Direction.down,relative_direction
                 else:                         return Direction.left,relative_direction
-
-def preprocess(data):
-    for i in range(len(data)):
-        return np.array(data, dtype=np.float32).reshape(-1, 4, 1)
 
 def getInputs(snake_nodes,grid,absolute_direction,relative_direction):
     inputs = neuralInputs(snake_nodes,grid,absolute_direction,relative_direction)
