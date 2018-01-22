@@ -126,7 +126,7 @@ def getTrainedModel(data, labels):
     network = regression(network, optimizer="adam", learning_rate=1e-2, loss="mean_square", name="target")
     model = tflearn.DNN(network)
 
-    model.fit(data, labels, n_epoch = 1, shuffle = True)
+    model.fit(data, labels, n_epoch = 10, shuffle = True)
     return model
 
 def getRelativeDirection(current_direction,next_direction):
@@ -185,15 +185,15 @@ def getOutputForTraining(inputs,snake_nodes,relative_direction):
 def runGame(death_count,font,model):
 
         # Game objects
-        direction = Direction.right
-        snake_position = (randint(1, columns-snake_initial_size),randint(1, rows-snake_initial_size))
+        directions = [Direction.right,Direction.left,Direction.up,Direction.down]
+        direction = directions[randint(0,len(directions)-1)]
+        snake_position = (randint(1, columns-snake_initial_size-1),randint(1, rows-snake_initial_size-1))
         grid = getGrid()
         snake_nodes = getSnakeNodes(snake_position[0],
                                     snake_position[1],
                                     grid)
         screen = pygame.display.set_mode((screen_size[0]*block_size,
                                           screen_size[1]*block_size))
-        death_count += 1
 
         # Game loop
         while not isGameOver(snake_nodes):
@@ -244,6 +244,8 @@ def runGame(death_count,font,model):
 
                 else:
                     snake_nodes = advanceSnake(snake_nodes,direction,grid)
+
+        death_count += 1
         runGame(death_count,font,model)
 
 data,labels = load_csv("Data.csv",target_column=0,categorical_labels=True,n_classes=2)
