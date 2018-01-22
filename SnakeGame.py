@@ -28,7 +28,6 @@ columns, rows = screen_size[0], screen_size[1];
 
 # Snake constants
 snake_initial_size = 1
-snake_position = (randint(1, columns-snake_initial_size),randint(1, rows-snake_initial_size))
 
 class SnakeNode:
         def __init__(self,x,y):
@@ -118,66 +117,76 @@ def areNeighboringNodesBlocked(left,forward,right):
 def isAnyNeighboringNodesBlocked(left,forward,right):
         return left == NodeType.wall or forward == NodeType.wall or right == NodeType.wall
 
-def neuralInputs(snake_nodes,grid,absolute_direction,relative_direction):
-        return (areNeighboringNodesBlocked(*getNeighboringNodes(snake_nodes,absolute_direction,grid)),relative_direction)
+def neuralInputs(snake_nodes,grid,absolute_direction):
+        return areNeighboringNodesBlocked(*getNeighboringNodes(snake_nodes,absolute_direction,grid))
 
 def getTrainedModel(data, labels):
-    network = input_data(shape=[None, 4, 1], name="input")
-    network = fully_connected(network, 1, activation="linear")
+    network = input_data(shape=[None, 4], name="input")
+    network = fully_connected(network, 2, activation="linear")
     network = regression(network, optimizer="adam", learning_rate=1e-2, loss="mean_square", name="target")
     model = tflearn.DNN(network)
 
-    data = np.array(data).reshape(-1, 4, 1)
-    labels = np.array(labels).reshape(-1, 1)
-
-    model.fit(data, labels, n_epoch = 10, shuffle = True)
+    model.fit(data, labels, n_epoch = 1, shuffle = True)
     return model
 
-def getPredictedDirection(snake_nodes,absolute_direction,relative_direction,model,inputs,grid):
+def getRelativeDirection(current_direction,next_direction):
+
+    if current_direction == Direction.right:
+            if next_direction == Direction.up: return -1
+            elif next_direction == Direction.right: return 0
+            else:                         return 1
+    elif current_direction == Direction.left:
+            if next_direction == Direction.down: return -1
+            elif next_direction == Direction.left: return 0
+            else:                         return 1
+    elif current_direction == Direction.up:
+            if next_direction == Direction.left: return -1
+            elif next_direction == Direction.up: return 0
+            else:                         return 1
+    else:
+            if next_direction == Direction.right: return -1
+            elif next_direction == Direction.down: return 0
+            else:                         return 1
+
+def getPredictedDirection(snake_nodes,absolute_direction,model,inputs,grid):
     head = snake_nodes[0]
 
-    prediction = model.predict(np.array(inputs, dtype=np.float32).reshape(-1, 4, 1))
-    # print(prediction)
+    prediction = model.predict([[inputs[0],inputs[1],inputs[2],-1],
+                                [inputs[0],inputs[1],inputs[2],0],
+                                [inputs[0],inputs[1],inputs[2],1]])
 
-    if prediction < 0.45:
-        relative_direction = randint(-1, 1)
-        print "Error # 0"
-        return getPredictedDirection(snake_nodes,absolute_direction,relative_direction,model,inputs,grid)
+    relative_directions = [-1,0,1]
+    relative_direction = relative_directions[np.argmax(prediction,0)[1]]
+
+    if absolute_direction == Direction.right:
+            if relative_direction == -1:  return Direction.up,relative_direction
+            elif relative_direction == 0: return Direction.right,relative_direction
+            else:                         return Direction.down,relative_direction
+    elif absolute_direction == Direction.left:
+            if relative_direction == -1:  return Direction.down,relative_direction
+            elif relative_direction == 0: return Direction.left,relative_direction
+            else:                         return Direction.up,relative_direction
+    elif absolute_direction == Direction.up:
+            if relative_direction == -1:  return Direction.left,relative_direction
+            elif relative_direction == 0: return Direction.up,relative_direction
+            else:                         return Direction.right,relative_direction
     else:
+            if relative_direction == -1:  return Direction.right,relative_direction
+            elif relative_direction == 0: return Direction.down,relative_direction
+            else:                         return Direction.left,relative_direction
 
-        # Error debugging
-        left,forward,right = getNeighboringNodes(snake_nodes,absolute_direction,grid)
-        if left == 0 and forward == NodeType.wall and right == 0 and relative_direction == 0:
-            print "Error # 1: "+str(prediction)
-
-        if absolute_direction == Direction.right:
-                if relative_direction == -1:  return Direction.up,relative_direction
-                elif relative_direction == 0: return Direction.right,relative_direction
-                else:                         return Direction.down,relative_direction
-        elif absolute_direction == Direction.left:
-                if relative_direction == -1:  return Direction.down,relative_direction
-                elif relative_direction == 0: return Direction.left,relative_direction
-                else:                         return Direction.up,relative_direction
-        elif absolute_direction == Direction.up:
-                if relative_direction == -1:  return Direction.left,relative_direction
-                elif relative_direction == 0: return Direction.up,relative_direction
-                else:                         return Direction.right,relative_direction
-        else:
-                if relative_direction == -1:  return Direction.right,relative_direction
-                elif relative_direction == 0: return Direction.down,relative_direction
-                else:                         return Direction.left,relative_direction
-
-def getInputs(snake_nodes,grid,absolute_direction,relative_direction):
-    inputs = neuralInputs(snake_nodes,grid,absolute_direction,relative_direction)
-    return inputs[0][0],inputs[0][1],inputs[0][2],inputs[1]
-
-def getOutputForTraining(inputs,snake_nodes,direction,grid):
-    return "\n{},{},{},{},{}".format(int(not isGameOver(snake_nodes)),*inputs)
+def getOutputForTraining(inputs,snake_nodes,relative_direction):
+    return "\n{},{},{},{},{}".format(int(not isGameOver(snake_nodes)),
+                                     inputs[0],
+                                     inputs[1],
+                                     inputs[2],
+                                     relative_direction)
 
 def runGame(death_count,font,model):
 
         # Game objects
         direction = Direction.right
+        snake_position = (randint(1, columns-snake_initial_size),randint(1, rows-snake_initial_size))
         grid = getGrid()
         snake_nodes = getSnakeNodes(snake_position[0],
                                     snake_position[1],
@@ -212,6 +221,8 @@ def runGame(death_count,font,model):
                 # elif pressed[pygame.K_LEFT] and direction!=Direction.right: direction = Direction.left
                 # elif pressed[pygame.K_RIGHT] and direction!=Direction.left: direction = Direction.right
 
+                current_direction = direction
+
                 # Random controls
                 # pressed = randint(0, 3)
                 # if pressed == 0 and direction!=Direction.down: direction = Direction.up
@@ -220,15 +231,13 @@ def runGame(death_count,font,model):
                 # elif pressed == 3 and direction!=Direction.left: direction = Direction.right
 
                 # AI controls
-                relative_direction = randint(-1, 1)
-                inputs = getInputs(snake_nodes,grid,direction,relative_direction)
-
                 if isAnyNeighboringNodesBlocked(*getNeighboringNodes(snake_nodes,direction,grid)) == True:
-                    direction,relative_direction = getPredictedDirection(snake_nodes,direction,relative_direction,model,inputs,grid)
+
+                    inputs = neuralInputs(snake_nodes,grid,direction)
+                    direction,relative_direction = getPredictedDirection(snake_nodes,direction,model,inputs,grid)
 
                     snake_nodes = advanceSnake(snake_nodes,direction,grid)
-                    output = getOutputForTraining(inputs,snake_nodes,direction,grid)
-                    # print(output)
+                    output = getOutputForTraining(inputs,snake_nodes,getRelativeDirection(current_direction,direction))
                     file = open("Data.csv","a")
                     file.write(output)
                     file.close()
