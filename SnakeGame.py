@@ -2,7 +2,7 @@
 import pygame
 from random import randint,shuffle
 import numpy as np
-from math import pi, asin, sqrt
+from math import pi, asin, sqrt, degrees, radians
 import tflearn
 from tflearn.layers.core import input_data, fully_connected
 from tflearn.layers.estimator import regression
@@ -131,7 +131,7 @@ def distanceBetweenSnakeAndFood(snake_nodes,food_position):
 
     return base+perpendicular
 
-def getOrthogonalAngle(snake_nodes,food_position):
+def getOrthogonalAngle(snake_nodes,food_position,absolute_direction):
     head = snake_nodes[0]
 
     food_x,food_y = food_position
@@ -141,11 +141,34 @@ def getOrthogonalAngle(snake_nodes,food_position):
 
     hypotenuse = sqrt(base**2 + perpendicular**2)+0.00001
 
-    return asin(perpendicular/hypotenuse)/(pi/2)
+    angle = degrees(asin(perpendicular/hypotenuse))%90
+
+    if absolute_direction == Direction.right:
+        if base >= 0 and perpendicular >= 0:   angle = angle + 0
+        elif base <= 0 and perpendicular >= 0: angle = angle + 90
+        elif base <= 0 and perpendicular <= 0: angle = angle + 90
+        else:                                  angle = angle + 0
+    elif absolute_direction == Direction.up:
+        if base >= 0 and perpendicular >= 0:   angle = angle + 0
+        elif base <= 0 and perpendicular >= 0: angle = angle + 0
+        elif base <= 0 and perpendicular <= 0: angle = angle + 90
+        else:                                  angle = angle + 90
+    elif absolute_direction == Direction.left:
+        if base >= 0 and perpendicular >= 0:   angle = angle + 90
+        elif base <= 0 and perpendicular >= 0: angle = angle + 0
+        elif base <= 0 and perpendicular <= 0: angle = angle + 0
+        else:                                  angle = angle + 90
+    else:
+        if base >= 0 and perpendicular >= 0:   angle = angle + 90
+        elif base <= 0 and perpendicular >= 0: angle = angle + 90
+        elif base <= 0 and perpendicular <= 0: angle = angle + 0
+        else:                                  angle = angle + 0
+
+    return radians(angle-90)/(pi/2)
 
 def neuralInputs(snake_nodes,grid,absolute_direction,food_position):
     return (areNeighboringNodesBlocked(*getNeighboringNodes(snake_nodes,absolute_direction,grid)),
-    round(getOrthogonalAngle(snake_nodes,food_position),3))
+        getOrthogonalAngle(snake_nodes,food_position,absolute_direction))
 
 def getTrainedModel(data, labels):
     network = input_data(shape=[None, 5], name='input')
@@ -155,7 +178,7 @@ def getTrainedModel(data, labels):
     network = regression(network, optimizer='adam', learning_rate=1e-2, loss='mean_square', name='target')
     model = tflearn.DNN(network)
 
-    model.fit(data, labels, n_epoch = 10, shuffle = True)
+    model.fit(data, labels, n_epoch = 1, shuffle = True)
     return model
 
 def getRelativeDirection(current_direction,next_direction):
@@ -256,7 +279,7 @@ def runGame(death_count,font,model):
         pygame.display.flip()
 
         # Clock ticking
-        pygame.time.Clock().tick(60)
+        pygame.time.Clock().tick(999999999999)
 
         # Manual controls
         # pressed = pygame.key.get_pressed()
