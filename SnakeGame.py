@@ -200,12 +200,13 @@ def getRelativeDirection(current_direction,next_direction):
         elif next_direction == Direction.down: return 0
         else:                         return 1
 
-def getPredictedDirection(snake_nodes,absolute_direction,model,inputs,grid):
+def getPredictedDirection(snake_nodes,absolute_direction,model,inputs,grid,shuffle_predictions):
     head = snake_nodes[0]
 
     relative_directions = [-1,0,1]
 
-    # shuffle(relative_directions)
+    if shuffle_predictions == True:
+        shuffle(relative_directions)
 
     for relative_direction in relative_directions:
         prediction = model.predict([[inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],relative_direction]])
@@ -248,9 +249,13 @@ def checkForFoodCollision(snake_nodes,grid):
     head = snake_nodes[0]
     return grid[head.x][head.y] == NodeType.food
 
+def resetStuckPosition():
+    return [[0 for x in range(columns)] for y in range(rows)]
+
 def runGame(death_count,font,model):
 
     # Game objects
+    score_count = 0
     grid = getGrid()
     directions = [Direction.right,Direction.left,Direction.up,Direction.down]
     direction = directions[randint(0,len(directions)-1)]
@@ -262,11 +267,13 @@ def runGame(death_count,font,model):
     screen = pygame.display.set_mode((screen_size[0]*block_size,
                                       screen_size[1]*block_size))
 
+    stuck_position = resetStuckPosition()
+
     # Game loop
     while not isGameOver(snake_nodes):
 
         # Update score
-        death_count_label = font.render("Death count: {}".format(death_count), 1, (255,255,0))
+        game_stats_label = font.render("Deaths: {}                    Score: {}".format(death_count,score_count), 1, (255,255,0))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -275,11 +282,15 @@ def runGame(death_count,font,model):
         # Drawing
         screen.fill(screen_color)
         drawNodes(grid,screen)
-        screen.blit(death_count_label, (0, 0))
+        screen.blit(game_stats_label, (0, 0))
         pygame.display.flip()
 
         # Clock ticking
-        pygame.time.Clock().tick(999999999999)
+        pygame.time.Clock().tick(60)
+
+        # If snake gets stuck in the same position for too long (5 times), shuffle the predictions
+        stuck_position[snake_nodes[0].x][snake_nodes[0].y] += 1
+        shuffle_predictions = (stuck_position[snake_nodes[0].x][snake_nodes[0].y] > 5)
 
         # Manual controls
         # pressed = pygame.key.get_pressed()
@@ -299,7 +310,7 @@ def runGame(death_count,font,model):
 
         # AI controls
         inputs = neuralInputs(snake_nodes,grid,direction,food_position)
-        direction,relative_direction = getPredictedDirection(snake_nodes,direction,model,inputs,grid)
+        direction,relative_direction = getPredictedDirection(snake_nodes,direction,model,inputs,grid,shuffle_predictions)
 
         previous_distance_between_snake_and_food = distanceBetweenSnakeAndFood(snake_nodes,food_position)
         snake_nodes = advanceSnake(snake_nodes,direction,grid)
@@ -318,7 +329,10 @@ def runGame(death_count,font,model):
         # file.close()
 
         if checkForFoodCollision(snake_nodes,grid):
+            score_count += 1
             food_position = generateFood(grid)
+            shuffle_predictions = False
+            stuck_position = resetStuckPosition()
 
     death_count += 1
     runGame(death_count,font,model)
