@@ -144,24 +144,24 @@ def getOrthogonalAngle(snake_nodes,food_position,absolute_direction):
     angle = degrees(asin(perpendicular/hypotenuse))%90
 
     if absolute_direction == Direction.right:
-        if base >= 0 and perpendicular >= 0:   angle = angle + 0
-        elif base <= 0 and perpendicular >= 0: angle = angle + 90
+        if base >= 0 and perpendicular <= 0:   angle = angle + 0
         elif base <= 0 and perpendicular <= 0: angle = angle + 90
+        elif base <= 0 and perpendicular >= 0: angle = angle + 90
         else:                                  angle = angle + 0
     elif absolute_direction == Direction.up:
-        if base >= 0 and perpendicular >= 0:   angle = angle + 0
-        elif base <= 0 and perpendicular >= 0: angle = angle + 0
-        elif base <= 0 and perpendicular <= 0: angle = angle + 90
+        if base >= 0 and perpendicular <= 0:   angle = angle + 0
+        elif base <= 0 and perpendicular <= 0: angle = angle + 0
+        elif base <= 0 and perpendicular >= 0: angle = angle + 90
         else:                                  angle = angle + 90
     elif absolute_direction == Direction.left:
-        if base >= 0 and perpendicular >= 0:   angle = angle + 90
-        elif base <= 0 and perpendicular >= 0: angle = angle + 0
+        if base >= 0 and perpendicular <= 0:   angle = angle + 90
         elif base <= 0 and perpendicular <= 0: angle = angle + 0
+        elif base <= 0 and perpendicular >= 0: angle = angle + 0
         else:                                  angle = angle + 90
     else:
-        if base >= 0 and perpendicular >= 0:   angle = angle + 90
-        elif base <= 0 and perpendicular >= 0: angle = angle + 90
-        elif base <= 0 and perpendicular <= 0: angle = angle + 0
+        if base >= 0 and perpendicular <= 0:   angle = angle + 90
+        elif base <= 0 and perpendicular <= 0: angle = angle + 90
+        elif base <= 0 and perpendicular >= 0: angle = angle + 0
         else:                                  angle = angle + 0
 
     return radians(angle-90)/(pi/2)
