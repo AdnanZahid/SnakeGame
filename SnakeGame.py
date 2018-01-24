@@ -145,7 +145,7 @@ def getOrthogonalAngle(snake_nodes,food_position):
 
 def neuralInputs(snake_nodes,grid,absolute_direction,food_position):
     return (areNeighboringNodesBlocked(*getNeighboringNodes(snake_nodes,absolute_direction,grid)),
-    round(getOrthogonalAngle(snake_nodes,food_position),1))
+    round(getOrthogonalAngle(snake_nodes,food_position),3))
 
 def getTrainedModel(data, labels):
     network = input_data(shape=[None, 5], name='input')
@@ -290,9 +290,9 @@ def runGame(death_count,font,model):
         else:                                                                                     target_output = 1
 
         output = getOutputForTraining(target_output,inputs,snake_nodes,getRelativeDirection(current_direction,direction))
-        file = open("Data.csv","a")
-        file.write(output)
-        file.close()
+        # file = open("Data.csv","a")
+        # file.write(output)
+        # file.close()
 
         if checkForFoodCollision(snake_nodes,grid):
             food_position = generateFood(grid)
