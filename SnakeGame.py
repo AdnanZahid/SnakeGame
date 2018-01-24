@@ -145,16 +145,17 @@ def getOrthogonalAngle(snake_nodes,food_position):
 
 def neuralInputs(snake_nodes,grid,absolute_direction,food_position):
     return (areNeighboringNodesBlocked(*getNeighboringNodes(snake_nodes,absolute_direction,grid)),
-    getOrthogonalAngle(snake_nodes,food_position))
+    round(getOrthogonalAngle(snake_nodes,food_position),1))
 
 def getTrainedModel(data, labels):
     network = input_data(shape=[None, 5], name='input')
+    network = fully_connected(network, 25, activation='relu')
     network = fully_connected(network, 25, activation='relu')
     network = fully_connected(network, 3, activation='linear')
     network = regression(network, optimizer='adam', learning_rate=1e-2, loss='mean_square', name='target')
     model = tflearn.DNN(network)
 
-    model.fit(data, labels, n_epoch = 1, shuffle = True)
+    model.fit(data, labels, n_epoch = 10, shuffle = True)
     return model
 
 def getRelativeDirection(current_direction,next_direction):
@@ -258,11 +259,11 @@ def runGame(death_count,font,model):
         pygame.time.Clock().tick(60)
 
         # Manual controls
-        pressed = pygame.key.get_pressed()
-        if pressed[pygame.K_UP] and direction!=Direction.down: direction = Direction.up
-        elif pressed[pygame.K_DOWN] and direction!=Direction.up: direction = Direction.down
-        elif pressed[pygame.K_LEFT] and direction!=Direction.right: direction = Direction.left
-        elif pressed[pygame.K_RIGHT] and direction!=Direction.left: direction = Direction.right
+        # pressed = pygame.key.get_pressed()
+        # if pressed[pygame.K_UP] and direction!=Direction.down: direction = Direction.up
+        # elif pressed[pygame.K_DOWN] and direction!=Direction.up: direction = Direction.down
+        # elif pressed[pygame.K_LEFT] and direction!=Direction.right: direction = Direction.left
+        # elif pressed[pygame.K_RIGHT] and direction!=Direction.left: direction = Direction.right
 
         current_direction = direction
 
@@ -287,8 +288,6 @@ def runGame(death_count,font,model):
         if isGameOver(snake_nodes):                                                               target_output = -1
         elif current_distance_between_snake_and_food >= previous_distance_between_snake_and_food:  target_output = 0
         else:                                                                                     target_output = 1
-
-        print(current_distance_between_snake_and_food)
 
         output = getOutputForTraining(target_output,inputs,snake_nodes,getRelativeDirection(current_direction,direction))
         file = open("Data.csv","a")
