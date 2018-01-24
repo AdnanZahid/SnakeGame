@@ -8,9 +8,14 @@ Relies on:
 3. PyGame
 4. NumPy
 
+Make sure you have the above dependencies, otherwise install them using ```pip install [dependency]```
+
 **How to run:**
 
-```python SnakeGame.py```
+```
+source bin/activate
+python SnakeGame.py
+```
 
 Written entirely in Python, it was a good project to practice python and get good practice on TFLearn and Neural Networks in general.
 
