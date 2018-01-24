@@ -6,9 +6,8 @@ from math import pi, asin, sqrt, degrees, radians
 import tflearn
 from tflearn.layers.core import input_data, fully_connected
 from tflearn.layers.estimator import regression
-
-# Load CSV file, indicate that the first column represents labels
 from tflearn.data_utils import load_csv
+from more_itertools import unique_everseen
 
 # Enums
 class Direction:
@@ -34,6 +33,10 @@ class SnakeNode:
     def __init__(self,x,y):
         self.x = x
         self.y = y
+
+def removeDuplicates(input_file_name,output_file_name):
+    with open(input_file_name,"r") as input_file, open(output_file_name,"w") as output_file:
+        output_file.writelines(unique_everseen(input_file))
 
 def getGrid():
     grid = [[0 for x in range(columns)] for y in range(rows)]
@@ -299,8 +302,6 @@ def runGame(death_count,font,model):
         # elif pressed[pygame.K_LEFT] and direction!=Direction.right: direction = Direction.left
         # elif pressed[pygame.K_RIGHT] and direction!=Direction.left: direction = Direction.right
 
-        current_direction = direction
-
         # Random controls
         # pressed = randint(0, 3)
         # if pressed == 0 and direction!=Direction.down: direction = Direction.up
@@ -309,6 +310,7 @@ def runGame(death_count,font,model):
         # elif pressed == 3 and direction!=Direction.left: direction = Direction.right
 
         # AI controls
+        current_direction = direction
         inputs = neuralInputs(snake_nodes,grid,direction,food_position)
         direction,relative_direction = getPredictedDirection(snake_nodes,direction,model,inputs,grid,shuffle_predictions)
 
@@ -324,9 +326,9 @@ def runGame(death_count,font,model):
         else:                                                                                     target_output = 1
 
         output = getOutputForTraining(target_output,inputs,snake_nodes,getRelativeDirection(current_direction,direction))
-        # file = open("Data.csv","a")
-        # file.write(output)
-        # file.close()
+        file = open("Data.csv","a")
+        file.write(output)
+        file.close()
 
         if checkForFoodCollision(snake_nodes,grid):
             score_count += 1
@@ -337,7 +339,10 @@ def runGame(death_count,font,model):
     death_count += 1
     runGame(death_count,font,model)
 
-data,labels = load_csv("Data.csv",target_column=0,categorical_labels=True,n_classes=3)
+# Remove duplicates so we have unique training data
+removeDuplicates("Data.csv","UniqueData.csv")
+# Load CSV file, indicate that the first column represents labels
+data,labels = load_csv("UniqueData.csv",target_column=0,categorical_labels=True,n_classes=3)
 model = getTrainedModel(data,labels)
 death_count = 0
 pygame.init()
