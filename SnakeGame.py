@@ -1,6 +1,6 @@
 # Imports
 import pygame
-from random import randint
+from random import randint,shuffle
 import numpy as np
 from math import pi, asin, sqrt
 import tflearn
@@ -126,11 +126,10 @@ def distanceBetweenSnakeAndFood(snake_nodes,food_position):
 
     food_x,food_y = food_position
 
-    base = food_x - head.x
-    perpendicular = food_y - head.y
+    base = abs(food_x - head.x)
+    perpendicular = abs(food_y - head.y)
 
-    hypotenuse = sqrt(base**2 + perpendicular**2)
-    return hypotenuse
+    return base+perpendicular
 
 def getOrthogonalAngle(snake_nodes,food_position):
     head = snake_nodes[0]
@@ -140,7 +139,7 @@ def getOrthogonalAngle(snake_nodes,food_position):
     base = food_x - head.x
     perpendicular = food_y - head.y
 
-    hypotenuse = sqrt(base**2 + perpendicular**2)
+    hypotenuse = sqrt(base**2 + perpendicular**2)+0.00001
 
     return asin(perpendicular/hypotenuse)/(pi/2)
 
@@ -180,14 +179,15 @@ def getRelativeDirection(current_direction,next_direction):
 def getPredictedDirection(snake_nodes,absolute_direction,model,inputs,grid):
     head = snake_nodes[0]
 
-    prediction = model.predict([[inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],-1],
-                                [inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],0],
-                                [inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],1]])
-
-    print(prediction)
-
     relative_directions = [-1,0,1]
-    relative_direction = relative_directions[np.argmax(prediction,0)[1]]
+
+    # shuffle(relative_directions)
+
+    for relative_direction in relative_directions:
+        prediction = model.predict([[inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],relative_direction]])
+
+        if np.argmax(prediction) == 1:
+            break
 
     if absolute_direction == Direction.right:
         if relative_direction == -1:  return Direction.up,relative_direction
@@ -285,8 +285,10 @@ def runGame(death_count,font,model):
         # If snake has moved away from the goal, target output is 0
         # If snake has moved closer to the goal, target output is 1
         if isGameOver(snake_nodes):                                                               target_output = -1
-        elif current_distance_between_snake_and_food > previous_distance_between_snake_and_food:  target_output = 0
+        elif current_distance_between_snake_and_food >= previous_distance_between_snake_and_food:  target_output = 0
         else:                                                                                     target_output = 1
+
+        print(current_distance_between_snake_and_food)
 
         output = getOutputForTraining(target_output,inputs,snake_nodes,getRelativeDirection(current_direction,direction))
         file = open("Data.csv","a")
