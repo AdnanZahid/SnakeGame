@@ -154,7 +154,8 @@ def distanceBetweenSnakeAndFood(snake_nodes,food_position):
     base = abs(food_x - head.x)
     perpendicular = abs(food_y - head.y)
 
-    return base+perpendicular
+    hypotenuse = sqrt(base**2 + perpendicular**2)
+    return hypotenuse
 
 def getOrthogonalAngle(snake_nodes,food_position,absolute_direction):
     head = snake_nodes[0]
@@ -298,7 +299,7 @@ def runGame(death_count,font,model):
     while not isGameOver(snake_nodes,grid):
 
         # Update score
-        game_stats_label = font.render("Deaths: {}                    Score: {}".format(death_count,score_count), 1, (255,255,0))
+        game_stats_label = font.render("Deaths: {}               Score: {}".format(death_count,score_count), 1, (255,255,0))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -311,7 +312,7 @@ def runGame(death_count,font,model):
         pygame.display.flip()
 
         # Clock ticking
-        pygame.time.Clock().tick(60)
+        pygame.time.Clock().tick(999999999999)
 
         # If snake gets stuck in the same position for too long (5 times), shuffle the predictions
         stuck_position[snake_nodes[0].x][snake_nodes[0].y] += 1
