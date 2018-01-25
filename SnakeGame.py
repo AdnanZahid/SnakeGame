@@ -348,9 +348,9 @@ def runGame(death_count,font,model):
         else:                                                                                     target_output = 1
 
         output = getOutputForTraining(target_output,inputs,snake_nodes,getRelativeDirection(current_direction,direction))
-        # file = open("Data.csv","a")
-        # file.write(output)
-        # file.close()
+        file = open("Data.csv","a")
+        file.write(output)
+        file.close()
 
         if checkForFoodCollision(snake_nodes,grid):
             score_count += 1
