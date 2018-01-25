@@ -13,7 +13,7 @@ from more_itertools import unique_everseen
 class Direction:
     left, right, up, down = range(4)
 class NodeType:
-    empty, snake, food, wall = range(4)
+    empty, snake_head, food, wall = range(4)
 
 # Screen constants
 block_size = 10
@@ -57,21 +57,40 @@ def getSnakeNodes(x,y,grid):
     for i in range(snake_initial_size):
         segment = SnakeNode(x+i, y)
         snake_nodes.append(segment)
-        grid[x+i][y] = NodeType.snake
+
+    grid[x][y] = NodeType.snake_head
+    for i in range(1,len(snake_nodes)):
+        grid[snake_nodes[i].x][snake_nodes[i].y] = NodeType.wall
 
     return snake_nodes
 
+def getGrownSnake(snake_nodes,direction,grid):
+    tail = snake_nodes[-1]
+
+    if direction == Direction.right:   new_tail = SnakeNode(tail.x-1, tail.y)
+    elif direction == Direction.left:  new_tail = SnakeNode(tail.x+1, tail.y)
+    elif direction == Direction.up:    new_tail = SnakeNode(tail.x, tail.y+1)
+    else:                              new_tail = SnakeNode(tail.x, tail.y-1)
+
+    grid[new_tail.x][new_tail.y] = NodeType.wall
+
+    snake_nodes.append(new_tail)
+
+    return snake_nodes,grid
+
 def drawNode(x,y,grid,screen):
-    if grid[x][y] == NodeType.snake:  color = snake_color
+    if grid[x][y] == NodeType.snake_head:  color = snake_color
     elif grid[x][y] == NodeType.food: color = food_color
     elif grid[x][y] == NodeType.wall: color = wall_color
     else:                             color = screen_color
 
     pygame.draw.rect(screen,color,pygame.Rect(x*block_size,y*block_size,block_size,block_size))
 
-def isGameOver(snake_nodes):
+def isGameOver(snake_nodes,grid):
     head = snake_nodes[0]
-    return head.x == 0\
+
+    return grid[head.x][head.y] == NodeType.wall\
+        or head.x == 0\
         or head.y == 0\
         or head.x == columns-1\
         or head.y == rows-1
@@ -96,8 +115,11 @@ def advanceSnake(snake_nodes,direction,grid):
 
     snake_nodes.insert(0,tail)
 
-    if grid[tail.x][tail.y] != NodeType.food:
-        grid[tail.x][tail.y] = NodeType.snake
+    if grid[tail.x][tail.y] != NodeType.food and grid[tail.x][tail.y] != NodeType.wall:
+        grid[tail.x][tail.y] = NodeType.snake_head
+
+    for i in range(1,len(snake_nodes)):
+        grid[snake_nodes[i].x][snake_nodes[i].y] = NodeType.wall
 
     return snake_nodes
 
@@ -273,7 +295,7 @@ def runGame(death_count,font,model):
     stuck_position = resetStuckPosition()
 
     # Game loop
-    while not isGameOver(snake_nodes):
+    while not isGameOver(snake_nodes,grid):
 
         # Update score
         game_stats_label = font.render("Deaths: {}                    Score: {}".format(death_count,score_count), 1, (255,255,0))
@@ -321,20 +343,21 @@ def runGame(death_count,font,model):
         # If game is over, target output is -1
         # If snake has moved away from the goal, target output is 0
         # If snake has moved closer to the goal, target output is 1
-        if isGameOver(snake_nodes):                                                               target_output = -1
-        elif current_distance_between_snake_and_food >= previous_distance_between_snake_and_food:  target_output = 0
+        if isGameOver(snake_nodes,grid):                                                          target_output = -1
+        elif current_distance_between_snake_and_food >= previous_distance_between_snake_and_food: target_output = 0
         else:                                                                                     target_output = 1
 
         output = getOutputForTraining(target_output,inputs,snake_nodes,getRelativeDirection(current_direction,direction))
-        file = open("Data.csv","a")
-        file.write(output)
-        file.close()
+        # file = open("Data.csv","a")
+        # file.write(output)
+        # file.close()
 
         if checkForFoodCollision(snake_nodes,grid):
             score_count += 1
             food_position = generateFood(grid)
             shuffle_predictions = False
             stuck_position = resetStuckPosition()
+            snake_nodes,grid = getGrownSnake(snake_nodes,direction,grid)
 
     death_count += 1
     runGame(death_count,font,model)
@@ -342,7 +365,7 @@ def runGame(death_count,font,model):
 # Remove duplicates so we have unique training data
 removeDuplicates("Data.csv","UniqueData.csv")
 # Load CSV file, indicate that the first column represents labels
-data,labels = load_csv("UniqueData.csv",target_column=0,categorical_labels=True,n_classes=3)
+data,labels = load_csv("Data.csv",target_column=0,categorical_labels=True,n_classes=3)
 model = getTrainedModel(data,labels)
 death_count = 0
 pygame.init()
