@@ -3,11 +3,10 @@ import pygame
 from random import randint,shuffle
 import numpy as np
 from math import pi, asin, sqrt, degrees, radians
-import tflearn
-from tflearn.layers.core import input_data, fully_connected
-from tflearn.layers.estimator import regression
-from tflearn.data_utils import load_csv
-from more_itertools import unique_everseen
+import pandas as pds
+from keras.models import Sequential
+from keras.layers import Dense
+import coremltools
 
 # Enums
 class Direction:
@@ -197,14 +196,16 @@ def neuralInputs(snake_nodes,grid,absolute_direction,food_position):
         getOrthogonalAngle(snake_nodes,food_position,absolute_direction))
 
 def getTrainedModel(data, labels):
-    network = input_data(shape=[None, 5], name='input')
-    network = fully_connected(network, 25, activation='relu')
-    network = fully_connected(network, 25, activation='relu')
-    network = fully_connected(network, 3, activation='linear')
-    network = regression(network, optimizer='adam', learning_rate=1e-2, loss='mean_square', name='target')
-    model = tflearn.DNN(network)
 
-    model.fit(data, labels, n_epoch = 1, shuffle = True)
+    model = Sequential()
+    model.add(Dense(5,input_shape=(5,),activation="relu"))
+    model.add(Dense(25,activation="relu"))
+    model.add(Dense(25,activation="relu"))
+    model.add(Dense(1,activation="linear"))
+    model.summary()
+    model.compile(loss="mean_squared_error",optimizer="adam",metrics=["accuracy"])
+    model.fit(data,labels,epochs=1)
+    
     return model
 
 def getRelativeDirection(current_direction,next_direction):
@@ -234,11 +235,20 @@ def getPredictedDirection(snake_nodes,absolute_direction,model,inputs,grid,shuff
     if shuffle_predictions == True:
         shuffle(relative_directions)
 
+    no_match_found = False
     for relative_direction in relative_directions:
-        prediction = model.predict([[inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],relative_direction]])
-
-        if np.argmax(prediction) == 1:
+        prediction = model.predict(np.array([[inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],relative_direction]]))
+        if prediction > 0.9:
+            print(prediction)
             break
+        no_match_found = True
+
+    if no_match_found == True and shuffle_predictions == True:
+        for relative_direction in relative_directions:
+            prediction = model.predict(np.array([[inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],relative_direction]]))
+            if prediction >= 0:
+                print(prediction)
+                break
 
     if absolute_direction == Direction.right:
         if relative_direction == -1:  return Direction.up,relative_direction
@@ -349,9 +359,9 @@ def runGame(death_count,font,model):
         else:                                                                                     target_output = 1
 
         output = getOutputForTraining(target_output,inputs,snake_nodes,getRelativeDirection(current_direction,direction))
-        file = open("Data.csv","a")
-        file.write(output)
-        file.close()
+        # file = open("Data.csv","a")
+        # file.write(output)
+        # file.close()
 
         if checkForFoodCollision(snake_nodes,grid):
             score_count += 1
@@ -363,11 +373,12 @@ def runGame(death_count,font,model):
     death_count += 1
     runGame(death_count,font,model)
 
-# Remove duplicates so we have unique training data
-removeDuplicates("Data.csv","UniqueData.csv")
 # Load CSV file, indicate that the first column represents labels
-data,labels = load_csv("Data.csv",target_column=0,categorical_labels=True,n_classes=3)
+data = pds.read_csv("Data.csv",usecols=[1,2,3,4,5])
+labels = pds.read_csv("Data.csv",usecols=[0])
 model = getTrainedModel(data,labels)
+# coreml_model = coremltools.converters.keras.convert(model)
+# coreml_model.save("SnakeModel.mlmodel")
 death_count = 0
 pygame.init()
 font = pygame.font.SysFont("monospace", 50)
