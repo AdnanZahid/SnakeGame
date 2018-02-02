@@ -239,7 +239,6 @@ def getPredictedDirection(snake_nodes,absolute_direction,model,inputs,grid,shuff
     for relative_direction in relative_directions:
         prediction = model.predict(np.array([[inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],relative_direction]]))
         if prediction > 0.9:
-            print(prediction)
             break
         no_match_found = True
 
@@ -247,7 +246,6 @@ def getPredictedDirection(snake_nodes,absolute_direction,model,inputs,grid,shuff
         for relative_direction in relative_directions:
             prediction = model.predict(np.array([[inputs[0][0],inputs[0][1],inputs[0][2],inputs[1],relative_direction]]))
             if prediction >= 0:
-                print(prediction)
                 break
 
     if absolute_direction == Direction.right:
@@ -370,9 +368,6 @@ def runGame(death_count,font,model):
             stuck_position = resetStuckPosition()
             snake_nodes,grid = getGrownSnake(snake_nodes,direction,grid)
 
-    death_count += 1
-    runGame(death_count,font,model)
-
 # Load CSV file, indicate that the first column represents labels
 data = pds.read_csv("Data.csv",usecols=[1,2,3,4,5])
 labels = pds.read_csv("Data.csv",usecols=[0])
@@ -382,4 +377,8 @@ model = getTrainedModel(data,labels)
 death_count = 0
 pygame.init()
 font = pygame.font.SysFont("monospace", 50)
-runGame(death_count,font,model)
+
+while True:
+    death_count += 1
+    runGame(death_count,font,model)
+    
